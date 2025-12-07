@@ -2,14 +2,13 @@ package com.example.kmmwebsocket.MessageApp.viewModel
 
 import com.example.kmmwebsocket.MessageApp.model.Message
 import com.example.kmmwebsocket.MessageApp.model.MessageType
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import com.example.kmmwebsocket.MessageApp.networkHelper.createWebSocketHttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
-import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.http.HttpMethod
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
+import io.ktor.websocket.readBytes
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +17,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.io.bytestring.ByteString
 
 class WebSocketManager {
     private var webSocket: DefaultClientWebSocketSession? = null
@@ -27,9 +25,10 @@ class WebSocketManager {
     private var reconnectJob: Job? = null
 
     private val listeners = mutableListOf<WebSocketListener>()
-    private val ktorClient = HttpClient(CIO) {
-        install(WebSockets)
-    }
+//    private val ktorClient = HttpClient() {
+//        install(WebSockets)
+//    }
+    private val ktorClient = createWebSocketHttpClient()
 
     interface WebSocketListener {
         fun onMessageReceived(message: Message)
@@ -41,6 +40,7 @@ class WebSocketManager {
     suspend fun connect() {
         try {
             ktorClient.webSocket("wss://echo.websocket.org") {
+//            ktorClient.webSocket("wss://ws.ifelse.io") {
                 webSocket = this
                 isConnected = true
                 notifyConnectionChanged(true)
@@ -57,6 +57,13 @@ class WebSocketManager {
                             notifyMessageReceived(newMessage)
                         }
                         is Frame.Binary -> {
+                            val imageBinary = frame.readBytes()
+                            val newMessage = Message(
+                                isSentByMe = false,
+                                type = MessageType.IMAGE,
+                                imageData = imageBinary,
+                            )
+                            notifyMessageReceived(newMessage)
 
                         }
                         is Frame.Close -> {
@@ -69,7 +76,7 @@ class WebSocketManager {
 
                         }
                         else -> {
-
+                            println("some error")
                         }
                     }
                 }
@@ -111,7 +118,13 @@ class WebSocketManager {
                                     notifyMessageReceived(newMessage)
                                 }
                                 is Frame.Binary -> {
-
+                                    val imageBinary = frame.readBytes()
+                                    val newMessage = Message(
+                                        isSentByMe = false,
+                                        type = MessageType.TEXT,
+                                        imageData = imageBinary,
+                                    )
+                                    notifyMessageReceived(newMessage)
                                 }
                                 is Frame.Close -> {
 
@@ -123,7 +136,7 @@ class WebSocketManager {
 
                                 }
                                 else -> {
-
+                                    println("some error")
                                 }
                             }
                         }
@@ -155,7 +168,7 @@ class WebSocketManager {
                         message.imageData?.let {
                             webSocket?.send(frame = Frame.Binary(
                                 data = it,
-                                fin = false
+                                fin = true
                             ))
 
                         }
@@ -195,7 +208,7 @@ class WebSocketManager {
         listeners.remove(listener)
     }
 
-    private fun notifyMessageReceived(message: Message) {
+     private fun notifyMessageReceived(message: Message) {
         listeners.forEach { it.onMessageReceived(message) }
     }
 

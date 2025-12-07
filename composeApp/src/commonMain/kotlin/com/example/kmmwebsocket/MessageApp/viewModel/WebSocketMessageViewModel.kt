@@ -38,6 +38,7 @@ class WebSocketMessageViewModel: ViewModel() {
 
             override fun onError(error: String) {
                 _isClientConnected.value = false
+                println(error)
             }
         }
 

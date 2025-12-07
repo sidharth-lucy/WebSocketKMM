@@ -48,6 +48,11 @@ kotlin {
 
             implementation(libs.kotlinx.datetime)
 
+            implementation(libs.imagepickerkmp)
+
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
+
         }
 
         iosMain.dependencies {
